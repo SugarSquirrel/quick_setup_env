@@ -1,9 +1,8 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-set PYTHON_VERSION=3.10.20
-set PYTHON_INSTALLER=python-3.10.20-amd64.exe
-set PYTHON_URL=https://www.python.org/ftp/python/3.10.20/python-3.10.20-amd64.exe
+set PYTHON_URL=https://www.python.org/ftp/python/3.10.11/python-3.10.11-amd64.exe
+set PYTHON_INSTALLER=python-3.10.11-amd64.exe
 set ZIP_URL=https://github.com/bouob/tickets_hunter/archive/refs/tags/v2026.04.23.zip
 set ZIP_NAME=tickets_hunter_v2026.04.23.zip
 set EXTRACT_DIR=%USERPROFILE%\tickets_hunter_setup
@@ -13,15 +12,15 @@ echo ============================================================
 echo  tickets_hunter setup - Windows
 echo ============================================================
 
-:: --- Step 1: Check Python 3.10.20 ---
-echo [1/5] Checking Python 3.10.20...
-python --version 2>nul | findstr "3.10.20" >nul
+:: --- Step 1: Check Python 3.10.x ---
+echo [1/5] Checking Python 3.10...
+python --version 2>nul | findstr "3.10" >nul
 if %ERRORLEVEL% == 0 (
-    echo [OK] Python 3.10.20 already installed.
+    echo [OK] Python 3.10 already installed.
     goto DOWNLOAD_ZIP
 )
 
-echo Downloading Python installer...
+echo Downloading Python 3.10.11 installer...
 powershell -Command "Invoke-WebRequest -Uri '%PYTHON_URL%' -OutFile '%TEMP%\%PYTHON_INSTALLER%'"
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Failed to download Python installer.
@@ -29,14 +28,14 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
-echo Installing Python 3.10.20...
+echo Installing Python 3.10.11...
 "%TEMP%\%PYTHON_INSTALLER%" /quiet InstallAllUsers=0 PrependPath=1 Include_pip=1
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Python installation failed.
     pause
     exit /b 1
 )
-echo [OK] Python 3.10.20 installed.
+echo [OK] Python 3.10.11 installed.
 set "PATH=%LOCALAPPDATA%\Programs\Python\Python310;%LOCALAPPDATA%\Programs\Python\Python310\Scripts;%PATH%"
 
 :DOWNLOAD_ZIP
