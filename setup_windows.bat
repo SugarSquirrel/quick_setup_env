@@ -13,7 +13,7 @@ echo  tickets_hunter setup - Windows
 echo ============================================================
 
 :: --- Step 1: Check Python 3.10.x ---
-echo [1/5] Checking Python 3.10...
+echo [1/4] Checking Python 3.10...
 python --version 2>nul | findstr "3.10" >nul
 if %ERRORLEVEL% == 0 (
     echo [OK] Python 3.10 already installed.
@@ -40,7 +40,7 @@ set "PATH=%LOCALAPPDATA%\Programs\Python\Python310;%LOCALAPPDATA%\Programs\Pytho
 
 :DOWNLOAD_ZIP
 :: --- Step 2: Download ZIP ---
-echo [2/5] Downloading tickets_hunter zip...
+echo [2/4] Downloading tickets_hunter zip...
 if not exist "%EXTRACT_DIR%" mkdir "%EXTRACT_DIR%"
 powershell -Command "Invoke-WebRequest -Uri '%ZIP_URL%' -OutFile '%EXTRACT_DIR%\%ZIP_NAME%'"
 if %ERRORLEVEL% neq 0 (
@@ -51,7 +51,7 @@ if %ERRORLEVEL% neq 0 (
 echo [OK] Downloaded.
 
 :: --- Step 3: Extract ZIP ---
-echo [3/5] Extracting...
+echo [3/4] Extracting...
 powershell -Command "Expand-Archive -Path '%EXTRACT_DIR%\%ZIP_NAME%' -DestinationPath '%EXTRACT_DIR%' -Force"
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Extraction failed.
@@ -60,8 +60,8 @@ if %ERRORLEVEL% neq 0 (
 )
 echo [OK] Extracted.
 
-:: --- Step 4: Change directory ---
-echo [4/5] Changing directory...
+:: --- Step 4: cd and pip install requirements ---
+echo [4/4] Installing requirements...
 set TARGET_PATH=%EXTRACT_DIR%\%TARGET_SUBDIR%
 if not exist "%TARGET_PATH%" (
     echo [ERROR] Target path not found: %TARGET_PATH%
@@ -71,14 +71,24 @@ if not exist "%TARGET_PATH%" (
 cd /d "%TARGET_PATH%"
 echo [OK] Now in: %TARGET_PATH%
 
-:: --- Step 5: Run settings.py ---
-echo [5/5] Running python src\settings.py...
-echo ============================================================
-python src\settings.py
+if not exist "requirement.txt" (
+    echo [ERROR] requirement.txt not found in %TARGET_PATH%
+    pause
+    exit /b 1
+)
+
+python -m pip install -r requirement.txt
+if %ERRORLEVEL% neq 0 (
+    echo [ERROR] pip install failed.
+    pause
+    exit /b 1
+)
+echo [OK] Requirements installed.
 
 echo.
 echo ============================================================
 echo  Setup complete. Working dir: %TARGET_PATH%
+echo  Next step: python src\settings.py
 echo ============================================================
 pause
 endlocal
