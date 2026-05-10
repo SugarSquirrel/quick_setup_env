@@ -3,39 +3,37 @@ setlocal EnableDelayedExpansion
 
 set PYTHON_URL=https://www.python.org/ftp/python/3.10.11/python-3.10.11-amd64.exe
 set PYTHON_INSTALLER=python-3.10.11-amd64.exe
-set ZIP_URL=https://github.com/bouob/tickets_hunter/archive/refs/tags/v2026.04.23.zip
-set ZIP_NAME=tickets_hunter_v2026.04.23.zip
+set ZIP_URL=https://github.com/SugarSquirrel/tickets_hunter/archive/refs/heads/main.zip
+set ZIP_NAME=tickets_hunter_main.zip
 set EXTRACT_DIR=%USERPROFILE%\tickets_hunter_setup
-set TARGET_SUBDIR=tickets_hunter-2026.04.23
+set TARGET_SUBDIR=tickets_hunter-main
+set PYTHON_DIR=%LOCALAPPDATA%\Programs\Python\Python310
+set PYTHON_SCRIPTS=%LOCALAPPDATA%\Programs\Python\Python310\Scripts
 
 echo ============================================================
 echo  tickets_hunter setup - Windows
 echo ============================================================
 
 :: --- Step 1: Check Python 3.10.x ---
-echo [1/4] Checking Python 3.10...
+echo [1/5] Checking Python 3.10...
 
-:: Use "py" launcher first, fallback to "python"
-set PYTHON_CMD=
 py -3.10 --version >nul 2>&1
 if %ERRORLEVEL% == 0 (
     set PYTHON_CMD=py -3.10
     echo [OK] Python 3.10 found via py launcher.
-    goto DOWNLOAD_ZIP
+    goto ADD_PATH
 )
 
-:: Try python directly with a timeout-safe check
 where python >nul 2>&1
 if %ERRORLEVEL% == 0 (
     python --version 2>&1 | findstr "3.10" >nul
     if !ERRORLEVEL! == 0 (
         set PYTHON_CMD=python
         echo [OK] Python 3.10 already installed.
-        goto DOWNLOAD_ZIP
+        goto ADD_PATH
     )
 )
 
-:: Python 3.10 not found, install it
 echo Python 3.10 not found. Downloading installer...
 curl -L "%PYTHON_URL%" -o "%TEMP%\%PYTHON_INSTALLER%"
 if %ERRORLEVEL% neq 0 (
@@ -52,12 +50,38 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 echo [OK] Python 3.10.11 installed.
-set "PATH=%LOCALAPPDATA%\Programs\Python\Python310;%LOCALAPPDATA%\Programs\Python\Python310\Scripts;%PATH%"
 set PYTHON_CMD=python
 
+:ADD_PATH
+:: --- Step 2: Add Python to system PATH permanently ---
+echo [2/5] Adding Python to PATH...
+
+:: Add to current session
+set "PATH=%PYTHON_DIR%;%PYTHON_SCRIPTS%;%PATH%"
+
+:: Add to user PATH permanently via registry
+reg query "HKCU\Environment" /v PATH >nul 2>&1
+if %ERRORLEVEL% == 0 (
+    for /f "tokens=2,*" %%A in ('reg query "HKCU\Environment" /v PATH 2^>nul ^| findstr PATH') do set CURRENT_PATH=%%B
+) else (
+    set CURRENT_PATH=
+)
+
+echo !CURRENT_PATH! | findstr /i "Python310" >nul
+if %ERRORLEVEL% neq 0 (
+    if defined CURRENT_PATH (
+        setx PATH "%PYTHON_DIR%;%PYTHON_SCRIPTS%;!CURRENT_PATH!" >nul
+    ) else (
+        setx PATH "%PYTHON_DIR%;%PYTHON_SCRIPTS%" >nul
+    )
+    echo [OK] Python added to user PATH permanently.
+) else (
+    echo [OK] Python already in PATH, skipping.
+)
+
 :DOWNLOAD_ZIP
-:: --- Step 2: Download ZIP ---
-echo [2/4] Downloading tickets_hunter zip...
+:: --- Step 3: Download ZIP ---
+echo [3/5] Downloading tickets_hunter (main branch)...
 if not exist "%EXTRACT_DIR%" mkdir "%EXTRACT_DIR%"
 curl -L "%ZIP_URL%" -o "%EXTRACT_DIR%\%ZIP_NAME%"
 if %ERRORLEVEL% neq 0 (
@@ -67,8 +91,8 @@ if %ERRORLEVEL% neq 0 (
 )
 echo [OK] Downloaded.
 
-:: --- Step 3: Extract ZIP ---
-echo [3/4] Extracting...
+:: --- Step 4: Extract ZIP ---
+echo [4/5] Extracting...
 powershell -Command "Expand-Archive -Path '%EXTRACT_DIR%\%ZIP_NAME%' -DestinationPath '%EXTRACT_DIR%' -Force"
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Extraction failed.
@@ -77,8 +101,8 @@ if %ERRORLEVEL% neq 0 (
 )
 echo [OK] Extracted.
 
-:: --- Step 4: cd and pip install requirements ---
-echo [4/4] Installing requirements...
+:: --- Step 5: cd and pip install requirements ---
+echo [5/5] Installing requirements...
 set TARGET_PATH=%EXTRACT_DIR%\%TARGET_SUBDIR%
 if not exist "%TARGET_PATH%" (
     echo [ERROR] Target path not found: %TARGET_PATH%
