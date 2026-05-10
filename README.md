@@ -13,21 +13,22 @@
 ## Windows — `setup_windows.bat`
 
 ### 事前準備（只需做一次）
-開啟 PowerShell，執行以下指令解除腳本執行限制：
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
-```
 
 ### 執行方式
-在 PowerShell 貼上：
-```powershell
-irm "https://raw.githubusercontent.com/SugarSquirrel/quick_setup_env/main/setup_windows.bat" -OutFile "$env:TEMP\setup.bat"; & "$env:TEMP\setup.bat"
+開啟 cmd 貼上：
+```cmd
+curl -L "https://raw.githubusercontent.com/SugarSquirrel/quick_setup_env/main/setup_windows.bat" -o "%TEMP%\setup.bat" && "%TEMP%\setup.bat"
 ```
 
 ### 完成後手動執行
 ```cmd
 cd %USERPROFILE%\tickets_hunter_setup\tickets_hunter-2026.04.23
 python src\settings.py
+```
+or
+```
+cd %USERPROFILE%\tickets_hunter_setup\tickets_hunter-2026.04.23
+py src\settings.py
 ```
 
 ---
