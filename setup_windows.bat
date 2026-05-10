@@ -14,14 +14,30 @@ echo ============================================================
 
 :: --- Step 1: Check Python 3.10.x ---
 echo [1/4] Checking Python 3.10...
-python --version 2>nul | findstr "3.10" >nul
+
+:: Use "py" launcher first, fallback to "python"
+set PYTHON_CMD=
+py -3.10 --version >nul 2>&1
 if %ERRORLEVEL% == 0 (
-    echo [OK] Python 3.10 already installed.
+    set PYTHON_CMD=py -3.10
+    echo [OK] Python 3.10 found via py launcher.
     goto DOWNLOAD_ZIP
 )
 
-echo Downloading Python 3.10.11 installer...
-powershell -Command "Invoke-WebRequest -Uri '%PYTHON_URL%' -OutFile '%TEMP%\%PYTHON_INSTALLER%'"
+:: Try python directly with a timeout-safe check
+where python >nul 2>&1
+if %ERRORLEVEL% == 0 (
+    python --version 2>&1 | findstr "3.10" >nul
+    if !ERRORLEVEL! == 0 (
+        set PYTHON_CMD=python
+        echo [OK] Python 3.10 already installed.
+        goto DOWNLOAD_ZIP
+    )
+)
+
+:: Python 3.10 not found, install it
+echo Python 3.10 not found. Downloading installer...
+curl -L "%PYTHON_URL%" -o "%TEMP%\%PYTHON_INSTALLER%"
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Failed to download Python installer.
     pause
@@ -37,12 +53,13 @@ if %ERRORLEVEL% neq 0 (
 )
 echo [OK] Python 3.10.11 installed.
 set "PATH=%LOCALAPPDATA%\Programs\Python\Python310;%LOCALAPPDATA%\Programs\Python\Python310\Scripts;%PATH%"
+set PYTHON_CMD=python
 
 :DOWNLOAD_ZIP
 :: --- Step 2: Download ZIP ---
 echo [2/4] Downloading tickets_hunter zip...
 if not exist "%EXTRACT_DIR%" mkdir "%EXTRACT_DIR%"
-powershell -Command "Invoke-WebRequest -Uri '%ZIP_URL%' -OutFile '%EXTRACT_DIR%\%ZIP_NAME%'"
+curl -L "%ZIP_URL%" -o "%EXTRACT_DIR%\%ZIP_NAME%"
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Failed to download zip.
     pause
@@ -72,12 +89,12 @@ cd /d "%TARGET_PATH%"
 echo [OK] Now in: %TARGET_PATH%
 
 if not exist "requirement.txt" (
-    echo [ERROR] requirement.txt not found in %TARGET_PATH%
+    echo [ERROR] requirement.txt not found.
     pause
     exit /b 1
 )
 
-python -m pip install -r requirement.txt
+%PYTHON_CMD% -m pip install -r requirement.txt
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] pip install failed.
     pause
@@ -88,7 +105,7 @@ echo [OK] Requirements installed.
 echo.
 echo ============================================================
 echo  Setup complete. Working dir: %TARGET_PATH%
-echo  Next step: python src\settings.py
+echo  Next step: %PYTHON_CMD% src\settings.py
 echo ============================================================
 pause
 endlocal
