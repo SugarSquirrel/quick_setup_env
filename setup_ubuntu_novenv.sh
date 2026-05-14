@@ -29,8 +29,8 @@ if command -v python3.10 &>/dev/null; then
     log_ok "$(python3.10 --version) found."
 else
     log_warn "Python 3.10 not found. Installing..."
-    apt-get update -y
-    apt-get install -y python3.10 python3-pip || log_error "Failed to install Python 3.10."
+    sudo apt-get update -y
+    sudo apt-get install -y python3.10 python3-pip || log_error "Failed to install Python 3.10."
     log_ok "Python 3.10 installed."
 fi
 
@@ -40,7 +40,7 @@ fi
 log_info "[2/5] Downloading tickets_hunter (main)..."
 mkdir -p "$EXTRACT_DIR"
 
-command -v unzip &>/dev/null || { apt-get install -y unzip || log_error "Failed to install unzip."; }
+command -v unzip &>/dev/null || { sudo apt-get install -y unzip || log_error "Failed to install unzip."; }
 
 if command -v curl &>/dev/null; then
     curl -fL "$ZIP_URL" -o "${EXTRACT_DIR}/${ZIP_NAME}" --progress-bar || log_error "Download failed."
