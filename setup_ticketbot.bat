@@ -3,7 +3,8 @@ setlocal EnableDelayedExpansion
 
 REM ============================================================
 REM ticket-bot setup for Windows VM (no conda / no venv)
-REM Installs: Python 3.11, Chrome, ticket-bot from fork
+REM Installs: Python 3.11 + ticket-bot + Playwright Chromium
+REM (No system Chrome required; uses Playwright's bundled browser)
 REM ============================================================
 
 set PYTHON_VERSION=3.11.9
@@ -11,9 +12,6 @@ set PYTHON_URL=https://www.python.org/ftp/python/%PYTHON_VERSION%/python-%PYTHON
 set PYTHON_INSTALLER=python-%PYTHON_VERSION%-amd64.exe
 set PYTHON_DIR=%LOCALAPPDATA%\Programs\Python\Python311
 set PYTHON_SCRIPTS=%LOCALAPPDATA%\Programs\Python\Python311\Scripts
-
-set CHROME_URL=https://dl.google.com/chrome/install/standalone/ChromeStandaloneSetup64.exe
-set CHROME_INSTALLER=ChromeStandaloneSetup64.exe
 
 set ZIP_URL=https://github.com/SugarSquirrel/ticket-bot-public/archive/refs/heads/main.zip
 set ZIP_NAME=ticket_bot_main.zip
@@ -25,7 +23,7 @@ echo  ticket-bot setup - Windows VM
 echo ============================================================
 
 REM --- Step 1: Check / install Python 3.11 ---
-echo [1/7] Checking Python 3.11...
+echo [1/6] Checking Python 3.11...
 
 py -3.11 --version >nul 2>&1
 if %ERRORLEVEL% == 0 (
@@ -64,7 +62,7 @@ set PYTHON_CMD=python
 
 :ADD_PATH
 REM --- Step 2: Persist Python in user PATH ---
-echo [2/7] Adding Python to PATH...
+echo [2/6] Adding Python to PATH...
 
 set "PATH=%PYTHON_DIR%;%PYTHON_SCRIPTS%;%PATH%"
 
@@ -87,38 +85,8 @@ if %ERRORLEVEL% neq 0 (
     echo [OK] Python already in PATH, skipping.
 )
 
-REM --- Step 3: Install Chrome (nodriver requires it) ---
-echo [3/7] Checking Chrome...
-
-if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" goto CHROME_OK
-if exist "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" goto CHROME_OK
-if exist "%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe" goto CHROME_OK
-
-echo Chrome not found. Downloading installer...
-curl -L "%CHROME_URL%" -o "%TEMP%\%CHROME_INSTALLER%"
-if %ERRORLEVEL% neq 0 (
-    echo [ERROR] Failed to download Chrome installer.
-    pause
-    exit /b 1
-)
-
-echo Installing Chrome silently (may take 1-2 min)...
-"%TEMP%\%CHROME_INSTALLER%" /silent /install
-if %ERRORLEVEL% neq 0 (
-    echo [WARN] Chrome silent install returned non-zero; checking if it installed anyway...
-)
-
-if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" goto CHROME_OK
-if exist "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" goto CHROME_OK
-echo [ERROR] Chrome installation appears to have failed.
-pause
-exit /b 1
-
-:CHROME_OK
-echo [OK] Chrome ready.
-
-REM --- Step 4: Download ticket-bot from fork ---
-echo [4/7] Downloading ticket-bot (fork main branch)...
+REM --- Step 3: Download ticket-bot from fork ---
+echo [3/6] Downloading ticket-bot (fork main branch)...
 if not exist "%EXTRACT_DIR%" mkdir "%EXTRACT_DIR%"
 curl -L "%ZIP_URL%" -o "%EXTRACT_DIR%\%ZIP_NAME%"
 if %ERRORLEVEL% neq 0 (
@@ -128,8 +96,8 @@ if %ERRORLEVEL% neq 0 (
 )
 echo [OK] Downloaded.
 
-REM --- Step 5: Extract ---
-echo [5/7] Extracting...
+REM --- Step 4: Extract ---
+echo [4/6] Extracting...
 powershell -Command "Expand-Archive -Path '%EXTRACT_DIR%\%ZIP_NAME%' -DestinationPath '%EXTRACT_DIR%' -Force"
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Extraction failed.
@@ -145,8 +113,8 @@ if not exist "%TARGET_PATH%" (
 )
 echo [OK] Extracted to %TARGET_PATH%.
 
-REM --- Step 6: pip install -e . (uses pyproject.toml) ---
-echo [6/7] Installing ticket-bot and dependencies (this may take 3-5 min)...
+REM --- Step 5: pip install -e . + Playwright Chromium ---
+echo [5/6] Installing ticket-bot, deps, and Playwright Chromium (~5-10 min total)...
 cd /d "%TARGET_PATH%"
 if not exist "pyproject.toml" (
     echo [ERROR] pyproject.toml not found in %TARGET_PATH%.
@@ -161,10 +129,19 @@ if %ERRORLEVEL% neq 0 (
     pause
     exit /b 1
 )
-echo [OK] ticket-bot installed.
+echo [OK] Python packages installed.
 
-REM --- Step 7: Set up config.yaml from template ---
-echo [7/7] Preparing config.yaml...
+echo Downloading Playwright Chromium (~120 MB)...
+%PYTHON_CMD% -m playwright install chromium
+if %ERRORLEVEL% neq 0 (
+    echo [ERROR] playwright install chromium failed.
+    pause
+    exit /b 1
+)
+echo [OK] Playwright Chromium ready.
+
+REM --- Step 6: Set up config.yaml from template ---
+echo [6/6] Preparing config.yaml...
 if not exist "config.yaml" (
     copy "config.yaml.example" "config.yaml" >nul
     echo [OK] config.yaml created from config.yaml.example.
@@ -178,11 +155,12 @@ echo  Setup complete.
 echo  Project dir: %TARGET_PATH%
 echo.
 echo  NEXT STEPS:
-echo  1. Edit config.yaml — fill in events[0].url, ticket_count,
-echo     date_keyword, area_keyword, sale_time, and most importantly
-echo     sessions[0].tixcraft_sid (the TIXUISID cookie value)
-echo  2. Verify login:        ticket-bot login
-echo  3. Dry-run test:        ticket-bot run --dry-run
+echo  1. Edit config.yaml:
+echo     - events[0].url / date_keyword / area_keyword / sale_time
+echo     - sessions[0].tixcraft_sid (TIXUISID cookie value)
+echo     - browser.engine should already be 'playwright' (default)
+echo  2. Verify login:         ticket-bot login
+echo  3. Dry-run test:         ticket-bot run --dry-run
 echo  4. Real run (countdown): ticket-bot countdown
 echo.
 echo  cd %TARGET_PATH%
