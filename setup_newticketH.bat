@@ -3,7 +3,7 @@ setlocal EnableDelayedExpansion
 
 set PYTHON_URL=https://www.python.org/ftp/python/3.10.11/python-3.10.11-amd64.exe
 set PYTHON_INSTALLER=python-3.10.11-amd64.exe
-set ZIP_URL=https://github.com/SugarSquirrel/tickets_hunter/archive/refs/heads/main.zip
+set ZIP_URL=https://github.com/bouob/tickets_hunter/archive/refs/heads/main.zip
 set ZIP_NAME=tickets_hunter_main.zip
 set EXTRACT_DIR=%USERPROFILE%\tickets_hunter_setup
 set TARGET_SUBDIR=tickets_hunter-main
