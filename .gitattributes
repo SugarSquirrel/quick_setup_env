@@ -1,0 +1,8 @@
+# Windows batch files must keep CRLF line endings.
+# Without this, Git may normalise them to LF and cmd.exe can misparse
+# the script on some systems.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Shell scripts must keep LF line endings.
+*.sh text eol=lf
