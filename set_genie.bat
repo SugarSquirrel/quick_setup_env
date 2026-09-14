@@ -26,23 +26,23 @@ REM       https://drive.google.com/file/d/1AbCdEfGh_IjKlMnOpQr/view?usp=sharing
 REM     The file ID is the part between  /d/  and  /view  :
 REM       1AbCdEfGh_IjKlMnOpQr
 REM     The file must be shared as "Anyone with the link" / Viewer.
-set "GDRIVE_FILE_ID=PUT_YOUR_FILE_ID_HERE"
+set "GDRIVE_FILE_ID=1xy1sK0oQ33a40Le2I7kE1Bu3vBEcl-rZ"
 
 REM  2. File name used when saving the ZIP onto the Desktop.
-set "ZIP_NAME=environment.zip"
+set "ZIP_NAME=genie.zip"
 
 REM  3. Folder name created on the Desktop for the extracted files.
-set "TARGET_FOLDER=environment"
+set "TARGET_FOLDER=genie"
 
 REM ============================================================
 REM  END OF CONFIGURATION - do not edit below this line
 REM ============================================================
 
-title Environment ZIP Setup - Windows
+title Genie ZIP Setup - Windows
 
 echo.
 echo ============================================================
-echo  Environment ZIP Setup - Windows
+echo  Genie ZIP Setup - Windows
 echo ============================================================
 echo.
 
