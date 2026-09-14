@@ -39,9 +39,14 @@ set "TARGET_FOLDER=genie"
 REM  4. Install Google Chrome?  yes = install if missing, no = skip entirely.
 set "INSTALL_CHROME=yes"
 
-REM  5. Google Chrome offline installer (64-bit enterprise MSI).
-REM     Always points at the current stable release.
-set "CHROME_MSI_URL=https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
+REM  5. Google Chrome installer. This is the small online installer, about
+REM     12 MB, which pulls only the components this machine needs. It is
+REM     the same browser as the full package, it just downloads less.
+REM
+REM     If this machine has restricted outbound access and the small
+REM     installer fails, swap in the full 160 MB offline package instead:
+REM       https://dl.google.com/chrome/install/standalonesetup64.exe
+set "CHROME_INSTALLER_URL=https://dl.google.com/chrome/install/latest/chrome_installer.exe"
 
 REM ============================================================
 REM  END OF CONFIGURATION - do not edit below this line
@@ -86,7 +91,7 @@ echo.
 set "ZIP_PATH=%DESKTOP_DIR%\%ZIP_NAME%"
 set "EXTRACT_DIR=%DESKTOP_DIR%\%TARGET_FOLDER%"
 set "COOKIE_FILE=%TEMP%\set_genie_cookies.txt"
-set "CHROME_MSI_PATH=%TEMP%\set_genie_chrome.msi"
+set "CHROME_INSTALLER_PATH=%TEMP%\set_genie_chrome_setup.exe"
 
 set "URL_PRIMARY=https://drive.usercontent.google.com/download?id=%GDRIVE_FILE_ID%&export=download&confirm=t"
 set "URL_FALLBACK=https://drive.google.com/uc?export=download&confirm=t&id=%GDRIVE_FILE_ID%"
@@ -159,31 +164,34 @@ echo       Chrome was not found. Installing it now.
 net session >nul 2>&1
 if errorlevel 1 goto :err_chrome_admin
 
-echo       Downloading the Chrome offline installer, about 160 MB.
-echo       This can take a few minutes.
+echo       Downloading the Chrome installer, about 12 MB.
 echo.
 
-if exist "%CHROME_MSI_PATH%" del /f /q "%CHROME_MSI_PATH%" >nul 2>&1
-curl.exe -L --fail --connect-timeout 30 --retry 2 --retry-delay 3 -o "%CHROME_MSI_PATH%" "%CHROME_MSI_URL%"
+if exist "%CHROME_INSTALLER_PATH%" del /f /q "%CHROME_INSTALLER_PATH%" >nul 2>&1
+curl.exe -L --fail --connect-timeout 30 --retry 2 --retry-delay 3 -o "%CHROME_INSTALLER_PATH%" "%CHROME_INSTALLER_URL%"
 if errorlevel 1 goto :err_chrome_download
-if not exist "%CHROME_MSI_PATH%" goto :err_chrome_download
+if not exist "%CHROME_INSTALLER_PATH%" goto :err_chrome_download
 
 echo.
-echo       Running the silent installer. Please wait.
-msiexec.exe /i "%CHROME_MSI_PATH%" /qn /norestart
-set "MSI_RC=%ERRORLEVEL%"
+echo       Running the silent installer. It now fetches the browser
+echo       itself, so this step takes a few minutes with no output.
+"%CHROME_INSTALLER_PATH%" /silent /install
 
-REM  0 = installed, 3010 = installed but a reboot is pending,
-REM  1638 = an equal or newer version is already present.
-if "%MSI_RC%"=="0" goto :chrome_installed
-if "%MSI_RC%"=="3010" goto :chrome_installed
-if "%MSI_RC%"=="1638" goto :chrome_installed
-goto :err_chrome_install
+REM  The online installer does not return a dependable exit code and can
+REM  hand off to a background process, so wait for chrome.exe to appear
+REM  rather than trusting the exit code. Gives up after about 5 minutes.
+set "WAIT_TICKS=0"
+
+:chrome_wait
+call :find_chrome
+if not errorlevel 1 goto :chrome_installed
+set /a WAIT_TICKS+=1
+if %WAIT_TICKS% GEQ 60 goto :err_chrome_install
+ping -n 6 127.0.0.1 >nul 2>&1
+goto :chrome_wait
 
 :chrome_installed
-call :find_chrome
-if errorlevel 1 goto :err_chrome_missing_after_install
-del /f /q "%CHROME_MSI_PATH%" >nul 2>&1
+del /f /q "%CHROME_INSTALLER_PATH%" >nul 2>&1
 call :chrome_version
 echo [OK] Google Chrome installed: %CHROME_VERSION%
 set "CHROME_STATUS=installed, version %CHROME_VERSION%"
@@ -342,7 +350,7 @@ goto :fail
 :err_chrome_download
 echo.
 echo [ERROR] Failed to download the Google Chrome installer.
-echo         URL: %CHROME_MSI_URL%
+echo         URL: %CHROME_INSTALLER_URL%
 echo.
 echo         The ZIP was already downloaded and extracted successfully:
 echo           %EXTRACT_DIR%
@@ -350,19 +358,17 @@ goto :fail
 
 :err_chrome_install
 echo.
-echo [ERROR] The Google Chrome installer failed. msiexec exit code: %MSI_RC%
+echo [ERROR] Chrome did not finish installing within the time limit, and
+echo         chrome.exe was not found in any of the expected locations.
 echo         The installer was kept so you can run it by hand:
-echo           %CHROME_MSI_PATH%
+echo           %CHROME_INSTALLER_PATH%
+echo.
+echo         If this machine has restricted outbound access, edit
+echo         CHROME_INSTALLER_URL near the top of this script and use the
+echo         full offline package listed in the comment above it.
 echo.
 echo         The ZIP was already downloaded and extracted successfully:
 echo           %EXTRACT_DIR%
-goto :fail
-
-:err_chrome_missing_after_install
-echo.
-echo [ERROR] The installer reported success but chrome.exe was not found
-echo         in any of the expected locations.
-echo         Installer kept at: %CHROME_MSI_PATH%
 goto :fail
 
 :fail
